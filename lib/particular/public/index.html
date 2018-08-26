@@ -11,22 +11,63 @@
     var particle_05um = [];
 
     $(function() {
-      var arrayLength = 30
-var newArray = []
+      var arrayLength = 30;
 
-Plotly.plot('graph', [{
-  y: [],
-  mode: 'lines',
-  line: {color: '#80CAF6'}
-}]);
+      var dataArrays = {};
+
+      var layout = {
+	      yaxis: {
+		      rangemode: 'tozero',
+	      }
+      }
+
+      Plotly.plot('graph', [
+	{
+	  name: "PM1.0",
+	  mode: 'lines',
+	  line: {color: '#80CAF6', shape: 'spline'}
+	},
+	{
+	  name: "PM2.5",
+	  mode: 'lines',
+	  line: {color: '#DF56F1', shape: 'spline'}
+	},
+	{
+	  name: "PM10",
+	  mode: 'lines',
+	  line: {color: '#F1C356', shape: 'spline', title: 'asdf'}
+	},
+      ], layout);
+
+      function appendToArray(arr, val) {
+	      var newArr = arr.concat([val]);
+	      newArr.splice(0, 1);
+	      return newArr
+      }
 
       var source = new EventSource('/samples');
       var timeParser = d3.timeParse("%Y-%m-%dT%H:%M:%S.%L%Z");
-      var data = [
-        { label: 'Layer 1', values: [ {x: 0, y: 0}, {x: 1, y: 1}, {x: 2, y: 2} ] },
-        { label: 'Layer 2', values: [ {x: 0, y: 0}, {x: 1, y: 1}, {x: 2, y: 4} ] }
-      ];
+      source.onmessage = function(e) {
+	      var data = JSON.parse(e.data);
+	      data.time = timeParser(data.time);
 
+	      for (var property in data) {
+		if (dataArrays[property] == null) {
+		  dataArrays[property] = new Array(arrayLength);
+		}
+		dataArrays[property] = appendToArray(dataArrays[property], data[property]);
+	      }
+
+	      var yArray = dataArrays.pm2_5_standard;
+	      var xArray = dataArrays.time;
+
+	      var data_update = {
+		y: [dataArrays.pm1_0_standard, dataArrays.pm2_5_standard, dataArrays.pm10_standard],
+		x: [xArray, xArray]
+	      };
+
+	      Plotly.update('graph', data_update);
+      };
     });
   </script>
   <body>
@@ -34,7 +75,7 @@ Plotly.plot('graph', [{
       <h1 class="text-center">Particle Graph</h1>
 
       <div class="row">
-        <div class="col-xs-8 text-center">
+        <div class="col-xs-12 text-center">
           <div id='graph'></div>
         </div>
       </div>
